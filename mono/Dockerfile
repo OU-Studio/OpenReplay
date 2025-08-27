@@ -26,11 +26,6 @@ RUN cd api && \
     if [ -f package-lock.json ]; then npm ci --omit=dev; else npm i --omit=dev; fi
 COPY api/ ./api/
 
-# Copy INGEST
-COPY ingest/package*.json ./ingest/
-RUN cd ingest && \
-    if [ -f package-lock.json ]; then npm ci --omit=dev; else npm i --omit=dev; fi
-COPY ingest/ ./ingest/
 
 # Nginx config & Supervisor config
 COPY nginx.conf /etc/nginx/nginx.conf
