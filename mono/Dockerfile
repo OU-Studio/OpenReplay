@@ -33,9 +33,9 @@ RUN cd ingest && \
 COPY ingest/ ./ingest/
 
 # Nginx config & Supervisor config
-COPY mono/nginx.conf /etc/nginx/nginx.conf
-COPY mono/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY mono/entrypoint.sh /entrypoint.sh
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY entrypoint.sh /entrypoint.sh
 
 # Normalize line endings & perms
 RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
