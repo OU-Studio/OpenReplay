@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+lib
+cjs
+build
+.cache
+.eslintrc.cjs
+src/common/messages.ts
+*.gen.ts
+
+**/*.test.ts
+src/main/plugin.ts

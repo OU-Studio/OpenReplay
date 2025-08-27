@@ -1,0 +1,8 @@
+src
+tsconfig.json
+.prettierrc.json
+.eslintrc.cjs
+build
+compile.cjs
+.cache
+js_errors.txt

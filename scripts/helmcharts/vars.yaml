@@ -1,0 +1,192 @@
+fromVersion: "v1.22.0"
+# Databases specific variables
+postgresql: &postgres
+  # For generating passwords
+  # `openssl rand -hex 20`
+  postgresqlPassword: "{{ randAlphaNum 20}}"
+  postgresqlHost: "postgresql.db.svc.cluster.local"
+  postgresqlPort: "5432"
+  postgresqlUser: "postgres"
+  postgresqlDatabase: "postgres"
+  # resources:
+  #   requests:
+  #     memory: 256Mi
+  #     cpu: 250m
+  #   limits:
+  #     memory: 3000Mi
+  # asdf
+  #     cpu: 2
+
+# For enterpriseEdition
+connector: &connector
+  enabled: false
+
+clickhouse: &clickhouse
+  enabled: true
+  chHost: clickhouse-openreplay-clickhouse.db.svc.cluster.local
+  username: default
+  password: ""
+  service:
+    webPort: 9000
+    dataPort: 8123
+
+# For enterpriseEdition
+quickwit: &quickwit
+  enabled: false
+
+kafka: &kafka
+  # For enterpriseEdition
+  # enabled: true
+  kafkaHost: "kafka.db.svc.cluster.local"
+  # For now, clickhouse doesn't support zookeeper tls intgration.
+  # So we need http endpoint
+  zookeeperHost: "databases-zookeeper.svc.cluster.local"
+  zookeeperNonTLSPort: 2181
+  kafkaPort: "9092"
+  kafkaUseSsl: "false"
+  maxMessageBytes: _3145728
+  # deleteTopicEnable: true
+  extraEnvVars:
+    - name: KAFKA_CFG_REPLICA_FETCH_MAX_BYTES
+      value: "3145728"
+    # This value already exists in the kafka values.yaml file, so overriding in top
+    # - name: KAFKA_CFG_MESSAGE_MAX_BYTES
+    #   value: "3000000"
+
+redis: &redis
+  enabled: true
+  redisHost: "redis-master.db.svc.cluster.local"
+  redisPort: "6379"
+
+minio:
+  # Disable this if you use an external object storage service (s3)
+  enabled: true
+  global:
+    minio:
+      # For generating passwords
+      # `openssl rand -hex 20`
+      accessKey: &accessKey "{{ randAlphaNum 20 }}"
+      secretKey: &secretKey "{{ randAlphaNum 20 }}"
+
+ingress-nginx: &ingress-nginx
+  # If you're using an external proxy in front of OpenReplay, update the proxy ports below.
+  # externalProxyPorts:
+  #   http: 80
+  #   https: 443
+  controller:
+    ingressClassResource:
+      # -- Name of the ingressClass
+      name: openreplay
+    # -- For backwards compatibility with ingress.class annotation, use ingressClass.
+    # Algorithm is as follows, first ingressClassName is considered, if not present, controller looks for ingress.class annotation
+    ingressClass: openreplay
+    addHeaders:
+      # Enable only if you know what you're doing!!!
+      # X-Frame-Options: "DENY"
+      X-XSS-Protection: "1; mode=block"
+      X-Content-Type-Options: "nosniff"
+      Referrer-Policy: "same-origin"
+    service:
+      externalTrafficPolicy: "Local"
+      ports:
+        http: 80
+        https: 443
+    extraArgs:
+      default-ssl-certificate: "app/openreplay-ssl"
+    config:
+      use-gzip: true
+      load-balance: ewma
+      enable-real-ip: true
+      # Enable LB forwarded protocol
+      # Ref: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#use-forwarded-headers
+      # https://github.com/nginxinc/kubernetes-ingress/issues/1284#issuecomment-872869354
+      # use-forwarded-headers: true
+      # Ref: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#max-worker-connections
+      max-worker-connections: 0
+      # SSL redirection
+      ssl-redirect: false
+      force-ssl-redirect: false
+      proxy-body-size: 10m
+
+# Application specific variables
+global:
+  ingress: *ingress-nginx
+  postgresql: *postgres
+  kafka: *kafka
+  redis: *redis
+  quickwit: *quickwit
+  clickhouse: *clickhouse
+  connector: *connector
+  # Registry URL from where the OR images should be pulled.
+  openReplayContainerRegistry: "public.ecr.aws/p1t3u8a3"
+  # secret key to inject to assist and peers service
+  assistKey: "{{ randAlphaNum 20}}"
+  assistJWTSecret: "{{ randAlphaNum 20}}"
+  jwtSecret: "{{ randAlphaNum 20}}"
+  jwtSpotSecret: "{{ randAlphaNum 20}}"
+  tokenSecret: "{{randAlphaNum 20}}"
+  # In case of multiple nodes in the kubernetes cluster,
+  # we'll have to create an RWX PVC for shared components.
+  # If it's a single node, we'll use hostVolume, which is the default for the community/oss edition.
+  pvcRWXName: "hostPath"
+  s3:
+    region: "us-east-1"
+    # if you're using iam roles for authentication, keep the value empty.
+    # endpoint: ""
+    endpoint: "http://minio.db.svc.cluster.local:9000"
+    assetsBucket: "sessions-assets"
+    recordingsBucket: "mobs"
+    sourcemapsBucket: "sourcemaps"
+    spotsBucket: "spots"
+    # This is only for enterpriseEdition
+    quickwitBucket: "quickwit"
+    assistRecordsBucket: "records"
+    vaultBucket: "vault-data"
+    # if you're using one node installation, where
+    # you're using local s3, make sure these variables
+    # are same as minio.global.minio.accesskey and  secretKey
+    accessKey: *accessKey
+    secretKey: *secretKey
+  email:
+    emailHost: ""
+    emailPort: "587"
+    emailUser: ""
+    emailPassword: ""
+    emailUseTls: "true"
+    emailUseSsl: "false"
+    emailSslKey: ""
+    emailSslCert: ""
+    emailFrom: "OpenReplay<do-not-reply@openreplay.com>"
+
+  enterpriseEditionLicense: ""
+  domainName: ""
+
+chalice:
+  env:
+    JWT_REFRESH_SECRET: "{{ randAlphaNum 20}}"
+    JWT_SPOT_REFRESH_SECRET: "{{ randAlphaNum 20}}"
+    # captcha_server: ''
+    # captcha_key: ''
+    # SAML2_MD_URL: ''
+    # idp_entityId: ''
+    # idp_sso_url: ''
+    # idp_x509cert: ''
+    # idp_sls_url: ''
+    # idp_name: ''
+    # idp_tenantKey: ''
+    # enforce_SSO: 'false'
+# Below is an example on how to override values
+# chartname:
+#   filedFrom chart/Values.yaml:
+#     key: value
+#
+# For example (http):
+# http:
+#   resources:
+#     limits:
+#       cpu: 1024m
+#       memory: 4096Mi
+#     requests:
+#       cpu: 512m
+#       memory: 2056Mi
+

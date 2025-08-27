@@ -1,0 +1,61 @@
+migrationJob:
+  podAnnotations:
+    linkerd.io/inject: disabled
+
+migration:
+  env: {}
+
+deployment:
+  argo: false
+forceMigration: false
+skipMigration: false
+
+redis: &redis
+  tls:
+    enabled: false
+
+ingress-nginx:
+  enabled: true
+  controller:
+    admissionWebhooks:
+      patch:
+        podAnnotations:
+          linkerd.io/inject: disabled
+
+# For enterpriseEdition Only
+vault: &vault
+  vaultHost: databases-vault.db.svc.cluster.local:8200
+  annotations:
+    vault.hashicorp.com/agent-cache-enable: "true"
+    vault.hashicorp.com/agent-inject: "true"
+    vault.hashicorp.com/agent-inject-token: "true"
+    vault.hashicorp.com/template-static-secret-render-interval: 2m
+    # vault.hashicorp.com/log-level: debug
+    vault.hashicorp.com/agent-run-as-same-user: "true"
+    vault.hashicorp.com/agent-inject-command-processor.properties: |
+      pkill -TERM openreplay
+    vault.hashicorp.com/role: pgaccess
+    vault.hashicorp.com/agent-inject-secret-processor.properties: database/creds/db-app
+    vault.hashicorp.com/agent-inject-template-processor.properties: |
+      {{- with secret "database/creds/db-app" -}}
+      POSTGRES_STRING=postgres://{{.Data.username}}:{{.Data.password}}@postgresql.db.svc.cluster.local:5432/postgres
+      {{- end -}}
+
+minio:
+  # Force initialize minio, even if the instance is not provisioned by OR
+  forceInit: false
+
+global:
+  appLabels: {}
+  vault: *vault
+  redis: *redis
+  clusterDomain: "svc.cluster.local"
+  env: {}
+  # If you're accessing OpenReplay with http, then update the value to http
+  ORSecureAccess: true
+  orTmpDir: "/openreplay/storage/nfs"
+
+chalice:
+  env:
+    CH_COMPRESSION: "false"
+

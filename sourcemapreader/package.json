@@ -1,0 +1,27 @@
+{
+  "name": "sourcemapreader",
+  "version": "v1.22.0",
+  "description": "sourcemaps reader to get stack trace",
+  "main": "peerjs-server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openreplay/openreplay.git"
+  },
+  "author": "KRAIEM Taha Yassine <tahayk2@gmail.com>",
+  "license": "Elastic License 2.0 (ELv2)",
+  "bugs": {
+    "url": "https://github.com/openreplay/openreplay/issues"
+  },
+  "homepage": "https://github.com/openreplay/openreplay#readme",
+  "dependencies": {
+    "@azure/storage-blob": "^12.17.0",
+    "aws-sdk": "^2.1606.0",
+    "express": "^4.21.1",
+    "source-map": "^0.7.4",
+    "winston": "^3.13.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "paths": {
+    "~": [".."],
+    "~/*": ["../*"],
+    "@@": [".."],
+    "@@/*": ["../*"],
+    "~~": [".."],
+    "~~/*": ["../*"]
+  },
+  "lib": ["es2022", "DOM"],
+  "compilerOptions": {
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js"
+  }
+}
