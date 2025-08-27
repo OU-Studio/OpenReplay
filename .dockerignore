@@ -1,0 +1,8 @@
+**/node_modules
+**/.next
+**/dist
+**/build
+.git
+.gitignore
+*.log
+.DS_Store
