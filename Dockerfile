@@ -1,68 +1,38 @@
-# ---------- Stage 1: build frontend ----------
-FROM node:20-alpine AS fe-builder
-WORKDIR /app/frontend
-
-# Copy manifests first for better caching
-COPY frontend/package.json frontend/package-lock.json* frontend/yarn.lock* ./
-
-# Use npm or yarn depending on which lockfile exists
-RUN set -eux; \
-    if [ -f yarn.lock ]; then \
-      corepack enable && yarn install --frozen-lockfile; \
-    else \
-      npm config set fund false && npm config set audit false; \
-      if [ -f package-lock.json ]; then npm ci; else npm i; fi; \
-    fi
-
-# Copy source & build
-COPY frontend/ ./
-RUN set -eux; \
-    if [ -f yarn.lock ]; then \
-      yarn build; \
-    else \
-      npm run build; \
-    fi
-
-# ---------- Stage 2: runtime (nginx + supervisor + node) ----------
-FROM node:20-alpine
-
-# Nginx config: remove default site(s) so they can't collide
-RUN rm -f /etc/nginx/conf.d/* /etc/nginx/http.d/* || true
-
-# Copy your single, authoritative config
-COPY mono/nginx.conf /etc/nginx/nginx.conf
-
-# Install nginx & supervisor (Alpine)
-RUN apk add --no-cache nginx supervisor
-
-# Create dirs
-RUN mkdir -p /var/www/html /var/log/supervisor
-
-# Workdir for app code
+# ---------- Stage 1: Build the frontend ----------
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# ---- API ----
-COPY api/package.json api/package-lock.json* api/yarn.lock* ./api/
+# Copy manifests first for better cache
+COPY package.json package-lock.json* yarn.lock* ./
+# Install deps (supports npm or yarn)
 RUN set -eux; \
-    cd /app/api; \
-    if [ -f yarn.lock ]; then \
-      corepack enable && yarn install --frozen-lockfile --production; \
-    else \
-      npm config set fund false && npm config set audit false; \
-      if [ -f package-lock.json ]; then npm ci --omit=dev; else npm i --omit=dev; fi; \
-    fi
-COPY api/ ./api/
+  if [ -f yarn.lock ]; then \
+    corepack enable && yarn install --frozen-lockfile; \
+  else \
+    npm config set fund false && npm config set audit false; \
+    if [ -f package-lock.json ]; then npm ci; else npm i; fi; \
+  fi
 
-# ---- Static frontend into nginx web root ----
-COPY --from=fe-builder /app/frontend/dist/ /var/www/html/
+# Copy source and build
+COPY . .
+# If Vite/CRA/etc. outputs to 'dist' (default Vite) change if needed
+RUN set -eux; \
+  if [ -f yarn.lock ]; then yarn build; else npm run build; fi
 
-# ---- Config + entrypoint (these files live in mono/) ----
-COPY mono/nginx.conf /etc/nginx/nginx.conf
-COPY mono/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY mono/entrypoint.sh /entrypoint.sh
-RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
+# ---------- Stage 2: Serve via Nginx ----------
+FROM nginx:1.27-alpine
 
-ENV PORT=8080
+# Clean default site(s) to avoid conflicts
+RUN rm -f /etc/nginx/conf.d/* /etc/nginx/http.d/* || true
+
+# Copy built assets (adjust if your build dir isn't 'dist')
+COPY --from=builder /app/dist/ /usr/share/nginx/html/
+
+# Copy your Nginx config
+# (You’ll provide one of the configs below and name it nginx.conf)
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Railway maps external $PORT to this internal port; keep 8080 here
 EXPOSE 8080
 
-CMD ["/entrypoint.sh"] 
+CMD ["nginx", "-g", "daemon off;"]
