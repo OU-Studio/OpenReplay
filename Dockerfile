@@ -59,4 +59,4 @@ RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["/entrypoint.sh"]
+CMD ["/entrypoint.sh"] 
