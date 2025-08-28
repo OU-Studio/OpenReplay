@@ -26,6 +26,12 @@ RUN set -eux; \
 # ---------- Stage 2: runtime (nginx + supervisor + node) ----------
 FROM node:20-alpine
 
+# Nginx config: remove default site(s) so they can't collide
+RUN rm -f /etc/nginx/conf.d/* /etc/nginx/http.d/* || true
+
+# Copy your single, authoritative config
+COPY mono/nginx.conf /etc/nginx/nginx.conf
+
 # Install nginx & supervisor (Alpine)
 RUN apk add --no-cache nginx supervisor
 
